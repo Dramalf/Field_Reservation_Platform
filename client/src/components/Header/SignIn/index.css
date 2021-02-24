@@ -1,0 +1,23 @@
+.hide {
+    display: none;
+}
+
+.lockPage {
+    height: 100%;
+    width: 97%;
+    position: fixed;
+    z-index: 9900 !important;
+
+    background-color: rgba(200, 200, 188, 0.4);
+}
+
+.SignUp {
+    position: fixed;
+    left: 35%;
+    top: 20%;
+    z-index: 10000 !important;
+    padding: 10px;
+    background-color: #e4e5e6;
+    border-radius: 20px;
+    box-shadow: 0 0 15px 8px #d4d5f6;
+}
