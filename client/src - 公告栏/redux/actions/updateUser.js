@@ -1,1 +1,0 @@
-export const getHost=data=>({type:'GET_HOST',data})

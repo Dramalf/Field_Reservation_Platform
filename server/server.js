@@ -1,7 +1,21 @@
-const express = require('express')
+const express = require('express');
 const app = express()
-const {db}=require('./db')
+const { db } = require('./db')
+const {getFieldInfo}=require('./initial.js')
 var bodyParser = require('body-parser');
+var users = require('./users').items;
+ var session = require('express-session');
+ var FileStore = require('session-file-store')(session);
+ var identityKey = 'skey';
+app.use(session({ 
+    name: identityKey,
+    secret: 'malf',
+    saveUnitialized: false,
+    resave: false,
+    cookie: {
+        maxAge:10*1000
+    }
+}))
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded());
@@ -10,7 +24,13 @@ app.use((request,response,next)=>{
 	console.log('请求来自于',request.get('Host'));
 	console.log('请求的地址',request.url);
 	next() 
-})
+ })
+var findUser=function (userid,username) {
+    return users.find(function (item) {
+        return item.username === username && item.userid === userid;
+    })
+}
+
 let xcDateInfo = []
 let zcDateInfo = []
 let dcDateInfo = []
@@ -22,7 +42,7 @@ const getWeekDay = day => {
     switch (day) {
         case 1:
             return '星期一'
-        case 2:
+        case 2: 
             return '星期二'
         case 3:
             return '星期三'
@@ -80,6 +100,7 @@ for (var i = 0; i < 7; i++) {
     dcDateInfo = [...dcDateInfo, new dateObj(wd, date + i,'dc',day*1+i)]
 }
 
+
 getChosedField = (cf) => {
     switch (cf) {
         case 'xc': 
@@ -113,18 +134,38 @@ let notice=[]
     reservationInfo: [ [Object], [Object], [Object] ]
 */
 app.post('/login', (req, res) => {
-    const { userId } = req.body
-    let host = '计算机学院'
-    if (userId.length > 2)
-        host='光电学院'
-    res.send(host)
+    var sess = req.session;
+    const { userid,username } = req.body
+    var user = findUser(userid, username)
+    console.log("^^^",req.session)
+    if (user) {
+        req.session.regenerate(function (err) {
+            if (err) {
+                return res.json({ ret_code:2, ret_msg: '登陆失败' });
+            }
+            console.log(1)
+            req.session.loginUser = user.username;
+            res.json({ ret_code: 0, ret_msg: '登陆成功',host:'计算机学院' });
+        })
+    } else {
+        res.json({ret_code:1,ret_msg:'账号或密码错误'})
+    }
     // { userId: 'u213', username: '马聆风', remember: true }
 
 })
 
-
+// app.get('/',function (req,res,next) {
+//     var sess = req.session;
+//     var loginUser = sess.loginUser;
+//     var isLogined = !!loginUser;
+//     res.render('index', {
+//         isLogined: isLogined,
+//         name: loginUser || ''
+//     })
+// })
 
 app.post('/choose-field', (request, response) => {
+    console.log("###",request)
     const { chosedField } = request.body
     curDateInfo = getChosedField(chosedField)
     const data = {
@@ -160,11 +201,10 @@ app.post('/reservation', (request, response) => {
                             .then(res => {
                         })
                         notice = [
-                            {
+                            ...notice,{
                                 msg: msg,
                                 event: event
-                            },
-                            ...notice]
+                            }]
                        
                     }
                     
@@ -223,3 +263,4 @@ app.get('/notice',(request,response)=>{
 app.listen(5000,(err)=>{
 	if(!err) console.log('服务器1启动成功了,请求学生信息地址为：http://localhost:5000/students');
 })
+ 

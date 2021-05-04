@@ -2,7 +2,7 @@ const mysql = require('mysql')
 const config = {
     database: 'field_reservation_sys',
     user: 'root',
-    password:'malf0916'
+    password:'不告诉你'
 }
 
 

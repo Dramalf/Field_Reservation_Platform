@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import './index.css'
 import { Layout } from 'antd';
 import FieldNav from './Nav'
 import Notice from './Notice'

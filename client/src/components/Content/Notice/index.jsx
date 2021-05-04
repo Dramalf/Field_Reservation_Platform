@@ -23,9 +23,9 @@ class Notice extends Component {
                 .then(res => {
                     console.log(this.state.data)
                     this.props.updateTable(res.data)
-                    this.setState({ data: res.data.notice })
+                    this.setState({ data: res.data.notice.reverse() })
                 })
-        }, 3000);
+        }, 30000);
     }
     render() {
         const { data } = this.state

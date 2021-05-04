@@ -1,4 +1,4 @@
-import { Form, Input, Button, Checkbox } from 'antd';
+import { Form, Input, Button, Checkbox, message } from 'antd';
 import axios from 'axios';
 import { connect } from 'react-redux'
 import { getHost } from '../../../redux/actions/updateUser'
@@ -27,16 +27,25 @@ class SignIn extends Component {
     }
     onFinish = (values) => {
         this.props.getUserInfo(values)
-        console.log('Success:', values);
+        // console.log('Success:', values);
         this.setState(values)
-        this.SignBox.className += ' hide'
+
         axios.post(`http://localhost:3000/api1/login`, {
             ...values
         }).then(
             res => {
-                this.props.getHost(res.data)
-                this.setState({ host: res.data })
-                console.log(res)
+                const ret_code = res.data.ret_code
+                const ret_msg = res.data.ret_msg
+                if (ret_code === 0) {
+                    message.success(ret_msg);
+                    this.props.getHost(res.data.host)
+                    this.setState({ host: res.data.host })
+                    this.SignBox.className += ' hide'
+                }
+                else if (ret_code) {
+                    message.error(ret_msg);
+                }
+
             }
         )
     };
@@ -85,9 +94,6 @@ class SignIn extends Component {
                         <Input />
                     </Form.Item>
 
-                    <Form.Item {...tailLayout} name="remember" valuePropName="checked">
-                        <Checkbox>Remember me</Checkbox>
-                    </Form.Item>
 
                     <Form.Item {...tailLayout}>
                         <Button type="primary" htmlType="submit">

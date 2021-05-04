@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { updateTable } from '../../../../../redux/actions/updateTable'
 import { getFieldName } from '../../utlits'
 import { nanoid } from 'nanoid';
-
+import { getToken } from '../../../../../utils/auth'
 const { Option } = Select;
 
 const ReservationInput = ({ rezList, value = {}, onChange }) => {
@@ -100,7 +100,7 @@ class Reservation extends Component {
     onFinish = (values) => {
         console.log("&&&", this.props)
         const { id, fieldName, day } = this.props.dateObj
-        const { host } = this.props.host
+        const host = getToken()
         const { period } = values.reservation
         values.reservation = { ...values.reservation, day: day, dateid: id, host: host, chosedField: fieldName }
 
