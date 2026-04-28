@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>华中科技大学操场预定平台</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#111}
+    .hidden{display:none!important}
+    .loginbox{min-height:100vh;display:flex;justify-content:center;align-items:center}
+    .loginForm{width:480px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:24px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+    .loginForm h2{text-align:center;margin-top:6px;margin-bottom:18px}
+    .row{display:flex;align-items:center;gap:12px;margin-bottom:14px}.row label{width:72px;text-align:right;color:#555}
+    .row input,.row select{flex:1;height:36px;padding:0 10px;border:1px solid #d9d9d9;border-radius:6px}
+    .btn{border:1px solid #d9d9d9;background:#fff;color:#333;padding:8px 14px;border-radius:6px;cursor:pointer}
+    .btn.primary{background:#1890ff;color:#fff;border-color:#1890ff}
+    .app{min-height:100vh;display:flex;flex-direction:column}
+    .header{background:#fff;padding:14px 20px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+    .title{font-size:22px;font-weight:700}.subtitle{font-size:13px;color:#666}
+    .main{display:flex;gap:14px;padding:14px;flex:1}
+    .sider{width:200px;background:#fff;border:1px solid #f0f0f0;border-radius:8px;padding:10px}
+    .sider h4{margin:4px 8px 8px}.menu-item{padding:10px;border-radius:6px;cursor:pointer}.menu-item.active{background:#e6f7ff;color:#1890ff;font-weight:700}
+    .content{flex:1;background:#fff;border:1px solid #f0f0f0;border-radius:8px;padding:16px}
+    .table ul{padding:0;margin:10px 0;list-style:none;display:flex;gap:8px;flex-wrap:wrap}
+    .dateItem{height:120px;width:92px;text-align:center;font-weight:700;border-radius:10px;padding-top:6px;cursor:pointer}
+    .state-disabled{background:#e5e7eb}.state-available{background:#b7eb8f}.state-reserved{background:#ffa39e}
+    .notice{width:290px;background:#fff;border:1px solid #f0f0f0;border-radius:8px;padding:12px}
+    .notice-list{list-style:none;padding:0;margin:8px 0;max-height:520px;overflow:auto}.notice-list li{border-bottom:1px dashed #eee;padding:8px 0;font-size:14px}
+    .status{font-size:13px;color:#666;margin-bottom:8px}
+    dialog{border:none;border-radius:10px;padding:18px;min-width:360px}
+  </style>
+</head>
+<body>
+  <section id="loginView" class="loginbox">
+    <form id="loginForm" class="loginForm">
+      <h2>华中科技大学操场预定平台</h2>
+      <div class="row"><label>学号</label><input name="userid" required /></div>
+      <div class="row"><label>姓名</label><input name="username" required /></div>
+      <div style="text-align:center"><button class="btn primary" type="submit">提交</button></div>
+      <p id="loginStatus" class="status"></p>
+    </form>
+  </section>
+
+  <section id="appView" class="app hidden">
+    <header class="header">
+      <div><div class="title">HUST操场预定网站</div><div class="subtitle">你好，<span id="host"></span></div></div>
+      <button id="logout" class="btn">退出登录</button>
+    </header>
+    <main class="main">
+      <aside class="sider">
+        <h4>场地</h4>
+        <div class="menu-item active" data-field="xc">西操</div>
+        <div class="menu-item" data-field="zc">中操</div>
+        <div class="menu-item" data-field="dc">东操</div>
+      </aside>
+      <section class="content">
+        <h3>当前浏览场地：<span id="currentField">西操</span></h3>
+        <div class="status" id="status">加载中...</div>
+        <div class="table"><ul id="dateList"></ul></div>
+      </section>
+      <aside class="notice">
+        <h3 style="margin-top:6px">预约公告</h3>
+        <ul id="noticeList" class="notice-list"></ul>
+      </aside>
+    </main>
+  </section>
+
+  <dialog id="reserveDialog">
+    <h3 id="dialogTitle">场地详情</h3>
+    <div class="row"><label>时段</label><select id="period"></select></div>
+    <div class="row"><label>事件</label><select id="event"><option>训练</option><option>比赛</option></select></div>
+    <div style="text-align:right;display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn" id="cancelBtn">取消</button>
+      <button class="btn primary" id="confirmBtn">预约</button>
+    </div>
+  </dialog>
+
+  <script>
+    const FIELD_NAME = { xc: '西操', zc: '中操', dc: '东操' };
+    const STATE_TEXT = { disabled: '教学时间', available: '空闲', reserved: '已满' };
+    let state = null;
+    let currentField = 'xc';
+    let selectedDate = null;
+
+    const loginView = document.getElementById('loginView');
+    const appView = document.getElementById('appView');
+    const hostEl = document.getElementById('host');
+
+    function showApp(host) {
+      hostEl.textContent = host;
+      loginView.classList.add('hidden');
+      appView.classList.remove('hidden');
+      loadState();
+    }
+
+    async function loadState() {
+      const res = await fetch('/api/state');
+      state = await res.json();
+      document.getElementById('status').textContent = `数据更新时间：${new Date().toLocaleString('zh-CN')}`;
+      renderField();
+      renderNotice();
+    }
+
+    function renderField() {
+      const field = state.fields.find(f => f.code === currentField);
+      document.getElementById('currentField').textContent = FIELD_NAME[currentField];
+      document.querySelectorAll('.menu-item').forEach(el => el.classList.toggle('active', el.dataset.field === currentField));
+      const list = document.getElementById('dateList');
+      list.innerHTML = field.schedule.map(d => {
+        const total = d.slots.reduce((sum, s) => sum + (s.state === 'available' ? 1 : 0), 0);
+        const c = total === 0 ? 'reserved' : (total === 3 ? 'available' : (d.slots[0].state === 'disabled' && total === 2 ? 'available' : 'reserved'));
+        return `<li class="dateItem state-${c}" data-id="${d.isoDate}"><h3>${d.day}</h3>${d.date}<p>${total ? `还剩${total}场` : '无空闲'}</p></li>`;
+      }).join('');
+      list.querySelectorAll('.dateItem').forEach(el => el.addEventListener('click', () => openDialog(el.dataset.id)));
+    }
+
+    function renderNotice() {
+      const box = document.getElementById('noticeList');
+      if (!state.notices.length) { box.innerHTML = '<li>暂无预约公告</li>'; return; }
+      box.innerHTML = state.notices.map(n => `<li><b>[${n.event}]</b> ${n.message}</li>`).join('');
+    }
+
+    function openDialog(isoDate) {
+      const field = state.fields.find(f => f.code === currentField);
+      const day = field.schedule.find(d => d.isoDate === isoDate);
+      selectedDate = day;
+      const available = day.slots.filter(s => s.state === 'available');
+      document.getElementById('dialogTitle').textContent = `${FIELD_NAME[currentField]} ${day.date} ${day.day}`;
+      const period = document.getElementById('period');
+      period.innerHTML = available.map(s => `<option>${s.period}</option>`).join('') || '<option>无可预约时段</option>';
+      document.getElementById('confirmBtn').disabled = !available.length;
+      document.getElementById('reserveDialog').showModal();
+    }
+
+    async function doReserve() {
+      const host = localStorage.getItem('host') || '匿名同学';
+      const period = document.getElementById('period').value;
+      const event = document.getElementById('event').value;
+      const res = await fetch('/api/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fieldCode: currentField, isoDate: selectedDate.isoDate, period, host, event })
+      });
+      const body = await res.json();
+      alert(body.message || (res.ok ? '预定成功！' : '预约失败'));
+      if (res.ok) {
+        state = body.state;
+        renderField();
+        renderNotice();
+      }
+      document.getElementById('reserveDialog').close();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = Object.fromEntries(fd.entries());
+      const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!res.ok || data.ret_code !== 0) {
+        document.getElementById('loginStatus').textContent = data.ret_msg || '登录失败';
+        return;
+      }
+      localStorage.setItem('host', data.host);
+      showApp(data.host);
+    });
+
+    document.querySelectorAll('.menu-item').forEach(el => el.addEventListener('click', () => { currentField = el.dataset.field; renderField(); }));
+    document.getElementById('logout').addEventListener('click', () => { localStorage.removeItem('host'); location.reload(); });
+    document.getElementById('cancelBtn').addEventListener('click', () => document.getElementById('reserveDialog').close());
+    document.getElementById('confirmBtn').addEventListener('click', doReserve);
+
+    const savedHost = localStorage.getItem('host');
+    if (savedHost) showApp(savedHost);
+  </script>
+</body>
+</html>
