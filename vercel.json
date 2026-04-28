@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd client && npm install && npm run build",
+  "buildCommand": "cd client && npx --yes npm@10.9.2 install --no-audit --no-fund && npx --yes npm@10.9.2 run build",
   "outputDirectory": "client/build",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },

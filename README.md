@@ -28,5 +28,5 @@ vercel dev
 
 
 ## 部署兼容性
-- `client/package.json` 已固定 `node: 18.x`，并在 `build/start/test` 脚本加入 `NODE_OPTIONS=--openssl-legacy-provider`，用于兼容 `react-scripts@4` 在新 Node 版本下的构建问题。
-- `vercel.json` 改为使用 `buildCommand + outputDirectory`，避免旧 `builds` 配置导致项目设置失效。
+- `client/package.json` 的 `build/start/test` 脚本已加入 `NODE_OPTIONS=--openssl-legacy-provider`，用于兼容 `react-scripts@4` 在新 Node 版本下的构建问题。
+- `vercel.json` 使用 `npm@10` 执行安装与构建，规避 Vercel 默认 npm11 在旧 lockfile 上的兼容问题。
