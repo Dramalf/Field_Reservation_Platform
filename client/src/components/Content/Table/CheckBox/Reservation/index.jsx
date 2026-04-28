@@ -78,7 +78,7 @@ const ReservationInput = ({ rezList, value = {}, onChange }) => {
 class Reservation extends Component {
 
     handleOk = (reservation) => {
-        axios.post(`http://localhost:3000/api1/reservation`, {
+        axios.post(`/api/reservation`, {
             ...reservation
         }
         ).then(

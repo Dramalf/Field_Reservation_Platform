@@ -13,7 +13,7 @@ class Notice extends Component {
 
         setInterval(() => {
             const { fieldName } = this.props
-            axios.get(`http://localhost:3000/api1/notice`,
+            axios.get(`/api/notice`,
                 {
                     params: {
                         fieldName: fieldName,
