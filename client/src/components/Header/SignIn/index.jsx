@@ -30,7 +30,7 @@ class SignIn extends Component {
         // console.log('Success:', values);
         this.setState(values)
 
-        axios.post(`http://localhost:3000/api1/login`, {
+        axios.post(`/api/login`, {
             ...values
         }).then(
             res => {
