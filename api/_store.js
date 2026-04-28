@@ -1,4 +1,4 @@
-const SLOT_PERIODS = ['10:00-12:00', '12:00-14:00', '14:00-16:00'];
+const SLOT_PERIODS = ['10:00~12:00', '12:00~14:00', '14:00~16:00'];
 const FIELD_META = [
   { code: 'xc', name: '西操场' },
   { code: 'zc', name: '中操场' },
