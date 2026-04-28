@@ -5,5 +5,9 @@ module.exports = (req, res) => {
     res.status(405).json({ message: 'Method Not Allowed' });
     return;
   }
-  res.status(200).json(getStore());
+
+  const fieldName = req.query.fieldName || 'xc';
+  const store = getStore();
+  const dateInfo = store.fields[fieldName] || store.fields.xc;
+  res.status(200).json({ dateInfo });
 };

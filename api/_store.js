@@ -1,49 +1,54 @@
-const SLOT_PERIODS = ['10:00-12:00', '12:00-14:00', '14:00-16:00'];
-const FIELD_META = [
-  { code: 'xc', name: '西操场' },
-  { code: 'zc', name: '中操场' },
-  { code: 'dc', name: '东操场' }
-];
+const FIELD_CODES = ['xc', 'zc', 'dc'];
+const PERIODS = ['10:00~12:00', '12:00~14:00', '14:00~16:00'];
+const WEEK = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
-const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+function computeReservationState(reservationInfo) {
+  const available = reservationInfo.filter((x) => x.state === 1).length;
+  const reserved = reservationInfo.filter((x) => x.state === 0).length;
 
-function formatDate(date) {
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
+  if (reserved === 0) return -1;
+  if (available > 0) return 0;
+  return 1;
 }
 
-function createInitialState() {
-  const today = new Date();
+function createDateInfo(fieldName, offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
 
-  const fields = FIELD_META.map((field) => {
-    const schedule = Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
+  const reservationInfo = PERIODS.map((period, i) => ({
+    period,
+    state: i === 0 ? -1 : 1,
+    details: { host: '', userid: '', event: '' }
+  }));
 
-      return {
-        id: `${field.code}-${d.toISOString().slice(0, 10)}`,
-        isoDate: d.toISOString().slice(0, 10),
-        day: weekDays[d.getDay()],
-        date: formatDate(d),
-        slots: SLOT_PERIODS.map((period, idx) => ({
-          period,
-          state: idx === 0 ? 'disabled' : 'available',
-          details: { host: '', event: '' }
-        }))
-      };
-    });
+  return {
+    id: d.getDate(),
+    day: WEEK[d.getDay()],
+    fieldName,
+    isoDate: d.toISOString().slice(0, 10),
+    reservationState: computeReservationState(reservationInfo),
+    reservationInfo
+  };
+}
 
-    return { ...field, schedule };
+function createInitialStore() {
+  const fields = {};
+  FIELD_CODES.forEach((field) => {
+    fields[field] = Array.from({ length: 7 }).map((_, i) => createDateInfo(field, i));
   });
 
-  return { fields, notices: [] };
+  return {
+    fields,
+    notice: []
+  };
 }
 
-if (!global.__FIELD_RESERVATION_STATE__) {
-  global.__FIELD_RESERVATION_STATE__ = createInitialState();
+if (!global.__FIELD_RESERVATION_STORE__) {
+  global.__FIELD_RESERVATION_STORE__ = createInitialStore();
 }
 
-function getState() {
-  return global.__FIELD_RESERVATION_STATE__;
+function getStore() {
+  return global.__FIELD_RESERVATION_STORE__;
 }
 
-module.exports = { getState };
+module.exports = { getStore, computeReservationState };

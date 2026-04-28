@@ -23,7 +23,7 @@ const tailLayout = {
 function Login(props) {
     const onFinish = (values) => {
         console.log(values)
-        axios.post(`http://localhost:3000/api1/login`, {
+        axios.post(`/api/login`, {
             ...values
         }).then(
             res => {

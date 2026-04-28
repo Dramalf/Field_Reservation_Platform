@@ -1,32 +1,27 @@
 # Field_Reservation_Platform
-华中科技大学操场预约平台（可直接部署到 Vercel）。
+华中科技大学操场预约平台（复用原 `client/` React 代码）。
 
-## 本地运行（真实 API）
-这个版本不再是纯静态假数据，`preview/index.html` 会调用同仓库下的 `api/` 接口。
-
+## 运行方式
+### 本地开发（React）
 ```bash
-cd /workspace/Field_Reservation_Platform
-vercel dev
+cd client
+npm install
+npm start
 ```
 
-启动后访问：
-- `http://localhost:3000/`（自动重写到 `preview/index.html`）
-- `http://localhost:3000/api/state`
+### 本地联调 API（Vercel）
+```bash
+vercel dev
+```
+然后访问 `http://localhost:3000`。
 
-## Vercel 部署
-1. 将仓库推送到 GitHub。
-2. 在 Vercel 中 `Add New Project` 并导入本仓库。
-3. Framework Preset 选择 `Other`（或保持自动）。
-4. 直接点击 `Deploy`。
+## Vercel 部署说明
+本仓库现在由 Vercel 直接构建 `client/` React 项目，并挂载根目录 `api/` 的 Serverless 接口。
 
-部署后：
-- 首页即预约页面。
-- `/api/state`、`/api/reserve` 为线上接口。
+- 前端：`client/`（`craco build` 产物）
+- 接口：`/api/login`、`/api/field-info`、`/api/reservation`、`/api/notice`
 
-## 当前实现
-- `preview/`：前端页面（预约表单 + 状态展示 + 公告列表）
-- `api/state.js`：读取当前场地预约状态
-- `api/reserve.js`：提交预约并更新公告
-- `api/_store.js`：服务端内存数据模型（演示用途）
-
-> 说明：当前数据存储在函数实例内存中，适合演示与预览。若要生产可用，建议接入 PostgreSQL / MySQL / Redis。
+## 说明
+- 这版已不再使用 `preview/index.html` 静态页面。
+- 为了和原项目交互一致，前端请求已改为同源 `/api/*`。
+- 当前数据是内存存储，重启/冷启动后会重置。
