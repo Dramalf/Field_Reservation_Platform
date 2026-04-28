@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>华科操场预约平台</title>
+  <style>
+    :root { --bg:#0b1020; --card:#131b34; --text:#e8eeff; --muted:#9fb0dd; --accent:#6ea8fe; --ok:#2ecc71; --busy:#ff7675; --disabled:#636e72; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background:linear-gradient(140deg,#0b1020,#111a3d 45%,#132d4d);color:var(--text)}
+    .wrap{max-width:1120px;margin:0 auto;padding:24px 20px 48px}
+    h1{margin:0 0 6px;font-size:clamp(24px,4vw,36px)}
+    .sub{margin:0;color:var(--muted)}
+    .panel{margin-top:18px;background:rgba(19,27,52,.9);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    select,input,button{border:none;border-radius:10px;padding:10px 12px;font-size:14px}
+    select,input{background:#0f1730;color:#e8eeff;border:1px solid rgba(255,255,255,.1)}
+    button{background:var(--accent);color:#0b1020;font-weight:700;cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:12px}
+    .meta{font-size:13px;color:var(--muted);margin:4px 0 10px}
+    .slot{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,.03);margin-bottom:8px}
+    .tag{font-size:12px;padding:4px 8px;border-radius:999px}
+    .available{background:rgba(46,204,113,.2);color:#b8ffd6}
+    .reserved{background:rgba(255,118,117,.2);color:#ffd1d0}
+    .disabled{background:rgba(99,110,114,.25);color:#dde2e5}
+    .notice{margin-top:16px;line-height:1.6;color:#d7e2ff}
+    .notice li{margin-bottom:6px}
+    .tip{color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>华科操场预约平台</h1>
+    <p class="sub">真实 API 版（Vercel 可直接运行）</p>
+
+    <section class="panel">
+      <div class="filters">
+        <select id="field"></select>
+        <select id="date"></select>
+        <select id="period"></select>
+        <input id="host" placeholder="预约人" />
+        <input id="event" placeholder="活动名称" />
+        <button id="reserveBtn">提交预约</button>
+      </div>
+      <p id="status" class="tip">正在加载数据...</p>
+      <div id="cards" class="grid"></div>
+    </section>
+
+    <section class="panel">
+      <h3>最新公告</h3>
+      <ul id="notice" class="notice"></ul>
+    </section>
+  </main>
+
+  <script>
+    const state = { data: null };
+    const fieldEl = document.getElementById('field');
+    const dateEl = document.getElementById('date');
+    const periodEl = document.getElementById('period');
+    const statusEl = document.getElementById('status');
+    const cardsEl = document.getElementById('cards');
+    const noticeEl = document.getElementById('notice');
+
+    const stateLabel = { available: '可预约', reserved: '已预约', disabled: '不可预约' };
+
+    function selectedField() {
+      return state.data.fields.find(f => f.code === fieldEl.value);
+    }
+
+    function selectedDay() {
+      const field = selectedField();
+      return field.schedule.find(d => d.isoDate === dateEl.value);
+    }
+
+    function syncDateOptions() {
+      const field = selectedField();
+      dateEl.innerHTML = field.schedule.map(d => `<option value="${d.isoDate}">${d.day} · ${d.date}</option>`).join('');
+      syncPeriodOptions();
+    }
+
+    function syncPeriodOptions() {
+      const day = selectedDay();
+      periodEl.innerHTML = day.slots.map(s => `<option value="${s.period}">${s.period} (${stateLabel[s.state]})</option>`).join('');
+    }
+
+    function renderCards() {
+      cardsEl.innerHTML = state.data.fields.map(field => {
+        const today = field.schedule[0];
+        const slotHtml = today.slots.map(s => `<div class="slot"><span>${s.period}</span><span class="tag ${s.state}">${stateLabel[s.state]}</span></div>`).join('');
+        return `<article class="card"><h4>${field.name}</h4><div class="meta">${today.day} · ${today.date}</div>${slotHtml}</article>`;
+      }).join('');
+    }
+
+    function renderNotices() {
+      if (!state.data.notices.length) {
+        noticeEl.innerHTML = '<li class="tip">暂无公告，快抢第一个预约名额吧。</li>';
+        return;
+      }
+      noticeEl.innerHTML = state.data.notices.slice(0, 10).map(n => `<li>${n.message}（${n.event}）</li>`).join('');
+    }
+
+    async function loadState() {
+      const res = await fetch('/api/state');
+      state.data = await res.json();
+      fieldEl.innerHTML = state.data.fields.map(f => `<option value="${f.code}">${f.name}</option>`).join('');
+      syncDateOptions();
+      renderCards();
+      renderNotices();
+      statusEl.textContent = `数据更新时间：${new Date().toLocaleString('zh-CN')}`;
+    }
+
+    async function reserve() {
+      const host = document.getElementById('host').value.trim();
+      const event = document.getElementById('event').value.trim();
+      if (!host || !event) {
+        statusEl.textContent = '请填写预约人和活动名称。';
+        return;
+      }
+
+      const res = await fetch('/api/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fieldCode: fieldEl.value,
+          isoDate: dateEl.value,
+          period: periodEl.value,
+          host,
+          event
+        })
+      });
+
+      const body = await res.json();
+      if (!res.ok) {
+        statusEl.textContent = body.message || '预约失败';
+        return;
+      }
+
+      statusEl.textContent = '预约成功！';
+      state.data = body.state;
+      syncDateOptions();
+      renderCards();
+      renderNotices();
+    }
+
+    fieldEl.addEventListener('change', syncDateOptions);
+    dateEl.addEventListener('change', syncPeriodOptions);
+    document.getElementById('reserveBtn').addEventListener('click', reserve);
+
+    loadState().catch(() => {
+      statusEl.textContent = '加载失败，请稍后刷新重试。';
+    });
+  </script>
+</body>
+</html>
