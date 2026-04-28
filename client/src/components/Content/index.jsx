@@ -29,7 +29,7 @@ class FieldContent extends Component {
     }
     getFieldName = (fieldName) => {
         this.setState({ fieldName: fieldName })
-        axios.get(`http://localhost:3000/api1/field-info`, {
+        axios.get(`/api/field-info`, {
             params: {
                 fieldName: fieldName
             }
